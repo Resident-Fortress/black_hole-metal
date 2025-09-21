@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  BlackHoleMetal
 //
-//  Enhanced UI for the Black Hole Metal simulation with Apple HIG compliance
+//  Main UI for the Black Hole Metal simulation
 //
 
 import SwiftUI
@@ -17,37 +17,91 @@ struct ContentView: View {
     @State private var lastResults: GeodesicResults?
     @State private var showingStatistics = false
     @State private var errorMessage: String?
-    @State private var selectedQuality: RenderQuality = .high
-    @State private var showingInfo = false
-    @State private var showingSettings = false
     
     private let minDistance: Float = 1e10
     private let maxDistance: Float = 1e12
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.black, Color(red: 0.05, green: 0.05, blue: 0.1)]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+        NavigationView {
+            VStack {
+                // Main visualization area
+                VStack {
+                    RayVisualizationView(rays: renderer.rays, colors: renderer.colors)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                        .cornerRadius(10)
+                    
+                    if renderer.isComputing {
+                        ProgressView("Computing geodesics...")
+                            .padding()
+                    }
+                }
                 
-                VStack(spacing: 0) {
-                    // Enhanced Header
-                    headerView
+                Spacer()
+                
+                // Controls
+                VStack(spacing: 16) {
+                    // Camera controls
+                    GroupBox("Camera Controls") {
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text("Distance:")
+                                Spacer()
+                                Text("\(formatDistance(cameraDistance))")
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Slider(value: $cameraDistance, 
+                                   in: minDistance...maxDistance) { _ in
+                                updateCamera()
+                            }
+                            
+                            HStack {
+                                VStack {
+                                    Text("Azimuth: \(Int(cameraAzimuth))°")
+                                    Slider(value: $cameraAzimuth, in: 0...360) { _ in
+                                        updateCamera()
+                                    }
+                                }
+                                
+                                VStack {
+                                    Text("Elevation: \(Int(cameraElevation))°")
+                                    Slider(value: $cameraElevation, in: 0...180) { _ in
+                                        updateCamera()
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
-                    // Main visualization area with enhanced design
-                    visualizationView(geometry: geometry)
-                    
-                    // Enhanced Controls Panel
-                    controlsPanel
+                    // Action buttons
+                    HStack {
+                        Button("Compute Geodesics") {
+                            computeGeodesics()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(renderer.isComputing)
+                        
+                        Button("Reset Camera") {
+                            resetCamera()
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Toggle("Auto Rotate", isOn: $isAutoRotating)
+                            .toggleStyle(.button)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Black Hole Metal")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Statistics") {
+                        showingStatistics = true
+                    }
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
             Button("OK") {
                 errorMessage = nil
@@ -58,190 +112,10 @@ struct ContentView: View {
         .sheet(isPresented: $showingStatistics) {
             StatisticsView(renderer: renderer, results: lastResults)
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(quality: $selectedQuality, renderer: renderer)
-        }
-        .sheet(isPresented: $showingInfo) {
-            InfoView()
-        }
         .onAppear {
             computeGeodesics()
             startAutoRotation()
         }
-    }
-    
-    // MARK: - Header View
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Sagittarius A* Explorer")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Text("Real-time Black Hole Visualization")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 16) {
-                // Quality indicator
-                QualityIndicatorView(quality: selectedQuality)
-                
-                // Action buttons
-                Button(action: { showingInfo = true }) {
-                    Image(systemName: "info.circle")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                }
-                
-                Button(action: { showingSettings = true }) {
-                    Image(systemName: "gearshape")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                }
-                
-                Button(action: { showingStatistics = true }) {
-                    Image(systemName: "chart.bar")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .opacity(0.8)
-        )
-    }
-    
-    // MARK: - Visualization View
-    private func visualizationView(geometry: GeometryProxy) -> some View {
-        ZStack {
-            // Main rendering area
-            RayVisualizationView(rays: renderer.rays, colors: renderer.colors)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 2
-                        )
-                )
-            
-            // Overlay information
-            VStack {
-                HStack {
-                    if renderer.isComputing {
-                        ComputingIndicatorView()
-                    }
-                    Spacer()
-                    
-                    // Distance indicator
-                    DistanceIndicatorView(distance: cameraDistance)
-                }
-                .padding()
-                
-                Spacer()
-                
-                // Camera position indicator
-                HStack {
-                    Spacer()
-                    CameraPositionView(
-                        azimuth: cameraAzimuth,
-                        elevation: cameraElevation,
-                        isAutoRotating: isAutoRotating
-                    )
-                }
-                .padding()
-            }
-        }
-        .padding(.horizontal, 20)
-        .frame(height: geometry.size.height * 0.6)
-    }
-    
-    // MARK: - Controls Panel
-    private var controlsPanel: some View {
-        VStack(spacing: 20) {
-            // Primary controls
-            CameraControlsView(
-                distance: $cameraDistance,
-                azimuth: $cameraAzimuth,
-                elevation: $cameraElevation,
-                minDistance: minDistance,
-                maxDistance: maxDistance,
-                onUpdate: updateCamera
-            )
-            
-            // Action buttons
-            HStack(spacing: 16) {
-                // Primary action
-                Button(action: computeGeodesics) {
-                    HStack {
-                        if renderer.isComputing {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "play.circle.fill")
-                                .font(.title3)
-                        }
-                        Text(renderer.isComputing ? "Computing..." : "Render")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .cornerRadius(25)
-                    .disabled(renderer.isComputing)
-                }
-                
-                // Secondary actions
-                Button(action: resetCamera) {
-                    Image(systemName: "arrow.counterclockwise.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
-                }
-                
-                Button(action: { isAutoRotating.toggle() }) {
-                    Image(systemName: isAutoRotating ? "pause.circle" : "play.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(isAutoRotating ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .padding(.top, 20)
-        .padding(.bottom, 20)
-        .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .opacity(0.9)
-        )
     }
     
     // MARK: - Private Methods
@@ -688,8 +562,6 @@ struct ControlRow: View {
     }
 }
 
-// MARK: - Ray Visualization View
-
 struct RayVisualizationView: View {
     let rays: [Ray]
     let colors: [simd_float4]
@@ -744,14 +616,15 @@ struct StatisticsView: View {
                         .font(.system(.body, design: .monospaced))
                     
                     if let results = results {
-                        Text("Rays Statistics")
+                        Divider()
+                        
+                        Text("Analysis")
                             .font(.headline)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Total rays: \(results.rays.count)")
                             Text("Black hole hits: \(results.blackHoleHits)")
-                            Text("Computation time: \(String(format: "%.2f", results.computationTime))s")
                             Text("Average escape distance: \(formatDistance(results.averageEscapeDistance))")
+                            Text("Computation time: \(String(format: "%.3f", results.computationTime))s")
                         }
                         .font(.system(.body, design: .monospaced))
                     }
@@ -761,15 +634,20 @@ struct StatisticsView: View {
             }
             .padding()
             .navigationTitle("Statistics")
+            // Apply compact title style only on mobile platforms
+            #if os(iOS) || os(tvOS) || os(visionOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                // Use platform-appropriate toolbar placement
+                #if os(iOS) || os(tvOS) || os(visionOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         // Dismiss handled by parent
                     }
                 }
-                #if os(iOS)
-                ToolbarItem(placement: .navigationBarLeading) {
+                #else
+                ToolbarItem(placement: .automatic) {
                     Button("Done") {
                         // Dismiss handled by parent
                     }
