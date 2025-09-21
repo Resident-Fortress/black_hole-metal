@@ -13,16 +13,14 @@ struct ContentView: View {
     @State private var cameraDistance: Float = 6.34194e10
     @State private var cameraAzimuth: Float = 0.0
     @State private var cameraElevation: Float = 90.0
+    @State private var isAutoRotating = false
     @State private var lastResults: GeodesicResults?
     @State private var showingStatistics = false
     @State private var errorMessage: String?
-
-    @State private var isRenderingHighQuality = false
-
     @State private var selectedQuality: RenderQuality = .high
     @State private var showingInfo = false
     @State private var showingSettings = false
-
+    @State private var isRenderingHighQuality = false
     
     private let minDistance: Float = 1e10
     private let maxDistance: Float = 1e12
@@ -38,74 +36,7 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
                 
-
-                // Controls
-                VStack(spacing: 16) {
-                    // Camera controls
-                    GroupBox("Camera Controls") {
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text("Distance:")
-                                Spacer()
-                                Text("\(formatDistance(cameraDistance))")
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Slider(value: $cameraDistance, 
-                                   in: minDistance...maxDistance) { _ in
-                                // No automatic rendering - user must press render button
-                            }
-                            
-                            HStack {
-                                VStack {
-                                    Text("Azimuth: \(Int(cameraAzimuth))°")
-                                    Slider(value: $cameraAzimuth, in: 0...360) { _ in
-                                        // No automatic rendering - user must press render button
-                                    }
-                                }
-                                
-                                VStack {
-                                    Text("Elevation: \(Int(cameraElevation))°")
-                                    Slider(value: $cameraElevation, in: 0...180) { _ in
-                                        // No automatic rendering - user must press render button
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Action buttons - focused on still shot rendering
-                    VStack(spacing: 12) {
-                        Button(isRenderingHighQuality ? "Rendering..." : "Render High Quality Still") {
-                            renderHighQualityStill()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(renderer.isComputing || isRenderingHighQuality)
-                        
-                        HStack {
-                            Button("Quick Preview") {
-                                renderQuickPreview()
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(renderer.isComputing)
-                            
-                            Button("Reset Camera") {
-                                resetCamera()
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Black Hole Metal")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Statistics") {
-                        showingStatistics = true
-                    }
-
-               VStack(spacing: 0) {
+                VStack(spacing: 0) {
                     // Enhanced Header
                     headerView
                     
@@ -114,7 +45,6 @@ struct ContentView: View {
                     
                     // Enhanced Controls Panel
                     controlsPanel
-
                 }
             }
         }
@@ -136,8 +66,8 @@ struct ContentView: View {
             InfoView()
         }
         .onAppear {
-            // Initial preview rendering only - no auto-rotation
-            renderQuickPreview()
+            computeGeodesics()
+            startAutoRotation()
         }
     }
     
@@ -256,52 +186,82 @@ struct ContentView: View {
             )
             
             // Action buttons
-            HStack(spacing: 16) {
-                // Primary action
-                Button(action: computeGeodesics) {
+            VStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    // Primary action
+                    Button(action: computeGeodesics) {
+                        HStack {
+                            if renderer.isComputing && !isRenderingHighQuality {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title3)
+                            }
+                            Text(renderer.isComputing && !isRenderingHighQuality ? "Computing..." : "Render")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(25)
+                        .disabled(renderer.isComputing)
+                    }
+                    
+                    // Secondary actions
+                    Button(action: resetCamera) {
+                        Image(systemName: "arrow.counterclockwise.circle")
+                            .font(.title2)
+                            .frame(width: 50, height: 50)
+                            .background(Color.secondary.opacity(0.2))
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                    }
+                    
+                    Button(action: { isAutoRotating.toggle() }) {
+                        Image(systemName: isAutoRotating ? "pause.circle" : "play.circle")
+                            .font(.title2)
+                            .frame(width: 50, height: 50)
+                            .background(isAutoRotating ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.2))
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                    }
+                }
+                
+                // High Quality Still Rendering Button
+                Button(action: renderHighQualityStill) {
                     HStack {
-                        if renderer.isComputing {
+                        if isRenderingHighQuality {
                             ProgressView()
                                 .scaleEffect(0.8)
                                 .tint(.white)
                         } else {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: "camera.circle.fill")
                                 .font(.title3)
                         }
-                        Text(renderer.isComputing ? "Computing..." : "Render")
+                        Text(isRenderingHighQuality ? "Rendering High Quality..." : "Render High Quality Still")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: 44)
                     .background(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                            gradient: Gradient(colors: [Color.green, Color.teal]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .foregroundColor(.white)
-                    .cornerRadius(25)
-                    .disabled(renderer.isComputing)
-                }
-                
-                // Secondary actions
-                Button(action: resetCamera) {
-                    Image(systemName: "arrow.counterclockwise.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
-                }
-                
-                Button(action: { isAutoRotating.toggle() }) {
-                    Image(systemName: isAutoRotating ? "pause.circle" : "play.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(isAutoRotating ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
+                    .cornerRadius(22)
+                    .disabled(renderer.isComputing || isRenderingHighQuality)
                 }
             }
             .padding(.horizontal, 20)
@@ -316,6 +276,28 @@ struct ContentView: View {
     }
     
     // MARK: - Private Methods
+    
+    private func updateCamera() {
+        if !renderer.isComputing {
+            computeGeodesics()
+        }
+    }
+    
+    private func computeGeodesics() {
+        Task {
+            do {
+                let camera = createCamera()
+                let results = try await renderer.computeGeodesics(camera: camera)
+                await MainActor.run {
+                    lastResults = results
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
     
     private func renderHighQualityStill() {
         Task {
@@ -337,31 +319,6 @@ struct ContentView: View {
                 }
             }
         }
-    }
-    
-    private func renderQuickPreview() {
-        Task {
-            do {
-                let camera = createCamera()
-                let results = try await renderer.computeGeodesics(camera: camera, highQuality: false)
-                await MainActor.run {
-                    lastResults = results
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    private func updateCamera() {
-        // Removed automatic rendering - now done via explicit buttons only
-    }
-
-    private func computeGeodesics() {
-        // Deprecated - replaced with explicit render methods
-        renderQuickPreview()
     }
     
     private func createCamera() -> CameraUniforms {
@@ -389,7 +346,19 @@ struct ContentView: View {
         cameraDistance = 6.34194e10
         cameraAzimuth = 0.0
         cameraElevation = 90.0
-        // No automatic rendering - user needs to press render button
+        updateCamera()
+    }
+    
+    private func startAutoRotation() {
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            if isAutoRotating && !renderer.isComputing {
+                cameraAzimuth += 1.0
+                if cameraAzimuth >= 360.0 {
+                    cameraAzimuth = 0.0
+                }
+                updateCamera()
+            }
+        }
     }
     
     private func formatDistance(_ distance: Float) -> String {

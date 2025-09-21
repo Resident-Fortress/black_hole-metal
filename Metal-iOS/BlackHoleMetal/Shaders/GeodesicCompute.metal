@@ -239,94 +239,6 @@ bool interceptBlackHole(Ray ray) {
     return ray.r <= SagA_rs;
 }
 
-
-// Compute realistic cosmic background with procedural star field
-float4 computeCosmicBackground(Ray ray, float3 dir) {
-    // Base cosmic microwave background color (very faint red-orange)
-    float4 cmbColor = float4(0.002, 0.001, 0.0005, 1.0);
-    
-    // Procedural star field based on ray direction
-    float3 p = normalize(dir) * 1000.0;
-    
-    // Multiple octaves of noise for realistic star distribution
-    float starIntensity = 0.0;
-    float scale = 1.0;
-    
-    for (int i = 0; i < 4; i++) {
-        float3 noiseCoord = p * scale;
-        float noise = sin(noiseCoord.x * 12.9898 + noiseCoord.y * 78.233 + noiseCoord.z * 37.719) * 43758.5453;
-        noise = fract(noise);
-        
-        // Create star-like points
-        if (noise > 0.998) {
-            float brightness = (noise - 0.998) * 500.0; // Very bright stars
-            starIntensity += brightness * (1.0 / scale);
-        } else if (noise > 0.995) {
-            float brightness = (noise - 0.995) * 100.0; // Medium stars  
-            starIntensity += brightness * (1.0 / scale);
-        } else if (noise > 0.99) {
-            float brightness = (noise - 0.99) * 20.0; // Dim stars
-            starIntensity += brightness * (1.0 / scale);
-        }
-        
-        scale *= 2.0;
-    }
-    
-    // Add gravitational redshift effect based on how close the ray got to the black hole
-    float minDistance = min(ray.r, SagA_rs * 10.0); // Track closest approach
-    float redshiftFactor = sqrt(1.0 - SagA_rs / minDistance);
-    
-    // Apply redshift to star colors (shift toward red end of spectrum)
-    float4 starColor = float4(starIntensity * redshiftFactor, 
-                             starIntensity * redshiftFactor * 0.8, 
-                             starIntensity * redshiftFactor * 0.6, 
-                             1.0);
-    
-    return cmbColor + starColor;
-}
-
-// Compute accretion disk contribution with temperature-based blackbody radiation
-float4 computeAccretionDisk(Ray ray, float3 dir) {
-    // Simple accretion disk model - disk in xy plane
-    float diskRadius = SagA_rs * 6.0; // Innermost stable circular orbit region
-    float diskThickness = SagA_rs * 0.1;
-    
-    // Check if ray passes through disk region
-    if (abs(ray.z) < diskThickness && ray.r > SagA_rs * 3.0 && ray.r < diskRadius) {
-        // Temperature decreases with distance from black hole  
-        float temperature = 1e6 / pow(ray.r / SagA_rs, 0.75); // Kelvin
-        
-        // Simplified blackbody radiation (Wien's displacement law)
-        float lambda_max = 2.898e-3 / temperature; // Peak wavelength in meters
-        
-        // Convert to RGB approximation
-        float4 diskColor;
-        if (lambda_max < 380e-9) {
-            // Ultraviolet - appears white-blue
-            diskColor = float4(0.8, 0.9, 1.0, 1.0);
-        } else if (lambda_max < 450e-9) {
-            // Blue
-            diskColor = float4(0.2, 0.4, 1.0, 1.0);
-        } else if (lambda_max < 550e-9) {
-            // Green-yellow  
-            diskColor = float4(0.5, 1.0, 0.3, 1.0);
-        } else if (lambda_max < 700e-9) {
-            // Orange-red
-            diskColor = float4(1.0, 0.5, 0.1, 1.0);
-        } else {
-            // Infrared - appears deep red
-            diskColor = float4(0.8, 0.1, 0.0, 1.0);
-        }
-        
-        // Intensity based on temperature and viewing angle
-        float intensity = temperature / 1e6; // Normalize
-        diskColor *= intensity;
-        
-        return diskColor;
-    }
-    
-    return float4(0.0, 0.0, 0.0, 0.0); // No contribution
-
 // Check if ray is near photon sphere for gravitational lensing effects
 float photonSphereEffect(Ray ray) {
     float distToPhotonSphere = abs(ray.r - PHOTON_SPHERE);
@@ -354,7 +266,6 @@ float3 generateStarfield(float3 direction) {
     // Add subtle background glow
     float bg = 0.02;
     return stars + float3(bg * 0.8, bg * 0.9, bg * 1.0);
-
 }
 
 // Main compute kernel for geodesic ray tracing
@@ -379,21 +290,6 @@ kernel void geodesicRayTrace(constant CameraUniforms& camera [[buffer(0)]],
 
     // Initialize ray
     Ray ray = initRay(camera.position, dir);
-
-
-    // March ray through geodesic with enhanced realistic rendering
-    float4 color = float4(0.0, 0.0, 0.0, 1.0);
-    float4 accumulatedColor = float4(0.0, 0.0, 0.0, 0.0);
-    const int MAX_STEPS = 10000;
-    float closestApproach = ESCAPE_R;
-
-    for (int step = 0; step < MAX_STEPS; ++step) {
-        // Track closest approach to black hole for redshift calculation
-        closestApproach = min(closestApproach, ray.r);
-        
-        // Check if ray hits black hole
-        if (interceptBlackHole(ray)) {
-            color = float4(0.0, 0.0, 0.0, 1.0); // Black for black hole (singularity)
 
     // Enhanced ray marching with photorealistic rendering
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
@@ -430,7 +326,6 @@ kernel void geodesicRayTrace(constant CameraUniforms& camera [[buffer(0)]],
             
             color = float4(diskColor * intensity, 1.0);
             hitSomething = true;
-
             break;
         }
         
@@ -441,34 +336,15 @@ kernel void geodesicRayTrace(constant CameraUniforms& camera [[buffer(0)]],
             color.rgb += lensColor;
         }
 
-        // Check for accretion disk interaction
-        float4 diskContribution = computeAccretionDisk(ray, dir);
-        if (diskContribution.w > 0.0) {
-            // Add disk emission with proper alpha blending
-            accumulatedColor.rgb += diskContribution.rgb * diskContribution.w;
-            accumulatedColor.w = min(accumulatedColor.w + diskContribution.w, 1.0);
-        }
-
-        // Integrate one step  
+        // Integrate one step
         rk4Step(ray, D_LAMBDA);
 
         // Check escape condition - ray reached infinity
         if (ray.r > ESCAPE_R) {
-
-            // Implement realistic cosmic background with realistic lighting
-            color = computeCosmicBackground(ray, dir);
-            
-            // Apply gravitational redshift based on closest approach
-            float redshiftFactor = sqrt(1.0 - SagA_rs / closestApproach);
-            color.rgb *= redshiftFactor;
-            
             break;
         }
     }
     
-
-    // Combine background and accretion disk contributions
-    color.rgb = color.rgb * (1.0 - accumulatedColor.w) + accumulatedColor.rgb;
     // If ray didn't hit anything, render starfield background
     if (!hitSomething) {
         float3 rayDirection = normalize(float3(ray.x, ray.y, ray.z) - camera.position);
@@ -483,7 +359,6 @@ kernel void geodesicRayTrace(constant CameraUniforms& camera [[buffer(0)]],
     color.rgb = pow(color.rgb, float3(0.85));  // Gamma correction
     color.rgb = color.rgb / (1.0 + color.rgb); // Simple tone mapping
     color.a = 1.0;
-
 
     // Store results
     rays[index] = ray;
