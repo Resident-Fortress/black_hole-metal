@@ -51,6 +51,8 @@ $RECYCLE.BIN/
 cmake-build-*/
 
 build
+build/
+out/
 
 ##### CMake
 CMakeLists.txt.user
@@ -60,7 +62,7 @@ CMakeScripts
 Testing
 Makefile
 cmake_install.cmake
-install_manifest.txt
+install_manifest.cmake
 compile_commands.json
 CTestTestfile.cmake
 _deps
@@ -94,6 +96,9 @@ _deps
 *.exe
 *.out
 *.app
+BlackHole2D
+BlackHole3D
+BlackHoleCUDA
 
 # C/C++ binary extension file
 *.bin
@@ -145,3 +150,23 @@ _deps
 
 # Vcpkg
 vcpkg_installed
+
+# CUDA specific
+*.cubin
+*.ptx
+
+# Metal/iOS specific
+DerivedData/
+*.xcworkspace/
+*.xcuserdata/
+
+# Temporary files
+/tmp/
+*.tmp
+*.log
+*~
+
+# Archive files
+*.zip
+*.tar.gz
+*.7z

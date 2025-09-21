@@ -115,6 +115,39 @@ struct Camera {
             Gravity = !Gravity;
             cout << "[INFO] Gravity turned " << (Gravity ? "ON" : "OFF") << endl;
         }
+        if (action == GLFW_PRESS && key == GLFW_KEY_R) {
+            // Reset camera position
+            radius = 6.34194e10f;
+            azimuth = 0.0f;
+            elevation = M_PI / 2.0f;
+            cout << "[INFO] Camera reset to default position" << endl;
+        }
+        if (action == GLFW_PRESS && key == GLFW_KEY_P) {
+            // Toggle between different preset viewpoints
+            static int preset = 0;
+            preset = (preset + 1) % 3;
+            switch(preset) {
+                case 0: // Default view
+                    radius = 6.34194e10f;
+                    azimuth = 0.0f;
+                    elevation = M_PI / 2.0f;
+                    cout << "[INFO] Switched to equatorial view" << endl;
+                    break;
+                case 1: // Top-down view
+                    radius = 8.0e10f;
+                    azimuth = 0.0f;
+                    elevation = 0.3f;
+                    cout << "[INFO] Switched to polar view" << endl;
+                    break;
+                case 2: // Close-up view
+                    radius = 3.0e10f;
+                    azimuth = M_PI / 4.0f;
+                    elevation = M_PI / 3.0f;
+                    cout << "[INFO] Switched to close-up view" << endl;
+                    break;
+            }
+        }
+        update();
     }
 };
 Camera camera;
