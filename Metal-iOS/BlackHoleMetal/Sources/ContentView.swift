@@ -13,10 +13,10 @@ struct ContentView: View {
     @State private var cameraDistance: Float = 6.34194e10
     @State private var cameraAzimuth: Float = 0.0
     @State private var cameraElevation: Float = 90.0
-    @State private var isAutoRotating = false
     @State private var lastResults: GeodesicResults?
     @State private var showingStatistics = false
     @State private var errorMessage: String?
+    @State private var isRenderingHighQuality = false
     
     private let minDistance: Float = 1e10
     private let maxDistance: Float = 1e12
@@ -53,42 +53,47 @@ struct ContentView: View {
                             
                             Slider(value: $cameraDistance, 
                                    in: minDistance...maxDistance) { _ in
-                                updateCamera()
+                                // No automatic rendering - user must press render button
                             }
                             
                             HStack {
                                 VStack {
                                     Text("Azimuth: \(Int(cameraAzimuth))°")
                                     Slider(value: $cameraAzimuth, in: 0...360) { _ in
-                                        updateCamera()
+                                        // No automatic rendering - user must press render button
                                     }
                                 }
                                 
                                 VStack {
                                     Text("Elevation: \(Int(cameraElevation))°")
                                     Slider(value: $cameraElevation, in: 0...180) { _ in
-                                        updateCamera()
+                                        // No automatic rendering - user must press render button
                                     }
                                 }
                             }
                         }
                     }
                     
-                    // Action buttons
-                    HStack {
-                        Button("Compute Geodesics") {
-                            computeGeodesics()
+                    // Action buttons - focused on still shot rendering
+                    VStack(spacing: 12) {
+                        Button(isRenderingHighQuality ? "Rendering..." : "Render High Quality Still") {
+                            renderHighQualityStill()
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(renderer.isComputing)
+                        .disabled(renderer.isComputing || isRenderingHighQuality)
                         
-                        Button("Reset Camera") {
-                            resetCamera()
+                        HStack {
+                            Button("Quick Preview") {
+                                renderQuickPreview()
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(renderer.isComputing)
+                            
+                            Button("Reset Camera") {
+                                resetCamera()
+                            }
+                            .buttonStyle(.bordered)
                         }
-                        .buttonStyle(.bordered)
-                        
-                        Toggle("Auto Rotate", isOn: $isAutoRotating)
-                            .toggleStyle(.button)
                     }
                 }
                 .padding()
@@ -113,24 +118,40 @@ struct ContentView: View {
             StatisticsView(renderer: renderer, results: lastResults)
         }
         .onAppear {
-            computeGeodesics()
-            startAutoRotation()
+            // Initial preview rendering only - no auto-rotation
+            renderQuickPreview()
         }
     }
     
     // MARK: - Private Methods
     
-    private func updateCamera() {
-        if !renderer.isComputing {
-            computeGeodesics()
+    private func renderHighQualityStill() {
+        Task {
+            await MainActor.run {
+                isRenderingHighQuality = true
+            }
+            
+            do {
+                let camera = createCamera()
+                let results = try await renderer.computeGeodesics(camera: camera, highQuality: true)
+                await MainActor.run {
+                    lastResults = results
+                    isRenderingHighQuality = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isRenderingHighQuality = false
+                }
+            }
         }
     }
     
-    private func computeGeodesics() {
+    private func renderQuickPreview() {
         Task {
             do {
                 let camera = createCamera()
-                let results = try await renderer.computeGeodesics(camera: camera)
+                let results = try await renderer.computeGeodesics(camera: camera, highQuality: false)
                 await MainActor.run {
                     lastResults = results
                 }
@@ -140,6 +161,15 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func updateCamera() {
+        // Removed automatic rendering - now done via explicit buttons only
+    }
+
+    private func computeGeodesics() {
+        // Deprecated - replaced with explicit render methods
+        renderQuickPreview()
     }
     
     private func createCamera() -> CameraUniforms {
@@ -167,19 +197,7 @@ struct ContentView: View {
         cameraDistance = 6.34194e10
         cameraAzimuth = 0.0
         cameraElevation = 90.0
-        updateCamera()
-    }
-    
-    private func startAutoRotation() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-            if isAutoRotating && !renderer.isComputing {
-                cameraAzimuth += 1.0
-                if cameraAzimuth >= 360.0 {
-                    cameraAzimuth = 0.0
-                }
-                updateCamera()
-            }
-        }
+        // No automatic rendering - user needs to press render button
     }
     
     private func formatDistance(_ distance: Float) -> String {
