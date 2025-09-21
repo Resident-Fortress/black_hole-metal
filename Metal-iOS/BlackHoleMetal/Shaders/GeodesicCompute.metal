@@ -13,6 +13,18 @@ constant float SagA_rs = 1.269e10;  // Schwarzschild radius of Sagittarius A*
 constant float D_LAMBDA = 1e7;      // Integration step size
 constant float ESCAPE_R = 1e30;     // Escape radius
 
+// Accretion disk parameters
+constant float DISK_INNER_RADIUS = 3.0 * SagA_rs;    // Inner stable orbit
+constant float DISK_OUTER_RADIUS = 20.0 * SagA_rs;   // Outer disk boundary
+constant float DISK_HEIGHT = 0.1 * SagA_rs;          // Disk thickness
+constant float PHOTON_SPHERE = 1.5 * SagA_rs;        // Photon sphere radius
+
+// Physics constants for realistic rendering
+constant float STEFAN_BOLTZMANN = 5.67e-8;           // Stefan-Boltzmann constant
+constant float PLANCK_H = 6.626e-34;                 // Planck constant
+constant float BOLTZMANN_K = 1.381e-23;              // Boltzmann constant
+constant float SPEED_OF_LIGHT = 2.998e8;             // Speed of light
+
 // Ray structure for geodesic computation
 struct Ray {
     // Cartesian coordinates
@@ -165,9 +177,95 @@ void rk4Step(thread Ray& ray, float dL) {
     ray.z = ray.r * cos(ray.theta);
 }
 
+// Advanced physics functions for realistic rendering
+
+// Calculate blackbody spectrum for given temperature
+float3 blackbodySpectrum(float temperature) {
+    // Simplified Wien's displacement law approximation for RGB
+    float r = clamp(1.0 - exp(-6000.0 / max(temperature, 1000.0)), 0.0, 1.0);
+    float g = clamp(1.0 - exp(-4000.0 / max(temperature, 1000.0)), 0.0, 1.0);
+    float b = clamp(1.0 - exp(-2000.0 / max(temperature, 1000.0)), 0.0, 1.0);
+    
+    // Normalize and apply realistic intensity scaling
+    float intensity = pow(temperature / 10000.0, 0.4);
+    return float3(r, g, b) * intensity;
+}
+
+// Calculate gravitational redshift factor
+float gravitationalRedshift(float r) {
+    return sqrt(max(0.01, 1.0 - SagA_rs / r));
+}
+
+// Noise function for accretion disk turbulence
+float noise(float2 pos) {
+    return fract(sin(dot(pos, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+// Multi-octave noise for realistic disk texture
+float turbulence(float2 pos, int octaves) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < octaves; i++) {
+        value += noise(pos) * amplitude;
+        pos *= 2.0;
+        amplitude *= 0.5;
+    }
+    return value;
+}
+
+// Check if ray intersects accretion disk
+bool interceptAccretionDisk(Ray ray, thread float* diskTemp) {
+    float r = ray.r;
+    float z = abs(ray.z);
+    
+    // Check if within accretion disk bounds
+    if (r >= DISK_INNER_RADIUS && r <= DISK_OUTER_RADIUS && z <= DISK_HEIGHT) {
+        // Calculate temperature profile: T ∝ r^(-0.75) (Shakura-Sunyaev model)
+        float baseTemp = 50000.0 * pow(DISK_INNER_RADIUS / r, 0.75);
+        
+        // Add turbulence and noise
+        float2 diskPos = float2(ray.phi * r / SagA_rs, r / SagA_rs);
+        float turbNoise = turbulence(diskPos * 0.1, 4);
+        float tempVariation = 0.3 * (turbNoise - 0.5);
+        
+        *diskTemp = baseTemp * (1.0 + tempVariation);
+        return true;
+    }
+    return false;
+}
+
 // Check if ray intersects black hole event horizon
 bool interceptBlackHole(Ray ray) {
     return ray.r <= SagA_rs;
+}
+
+// Check if ray is near photon sphere for gravitational lensing effects
+float photonSphereEffect(Ray ray) {
+    float distToPhotonSphere = abs(ray.r - PHOTON_SPHERE);
+    if (distToPhotonSphere < 0.5 * SagA_rs) {
+        return exp(-distToPhotonSphere / (0.2 * SagA_rs));
+    }
+    return 0.0;
+}
+
+// Generate starfield background
+float3 generateStarfield(float3 direction) {
+    float3 stars = float3(0.0);
+    
+    // Create multiple layers of stars with different sizes and brightnesses
+    for (int i = 0; i < 5; i++) {
+        float2 starPos = direction.xy * float(i + 1) * 100.0;
+        float starNoise = noise(starPos);
+        if (starNoise > 0.998) {  // Very sparse stars
+            float brightness = pow(starNoise - 0.998, 0.5) * 50.0;
+            float temperature = 3000.0 + starNoise * 7000.0;  // K-M star range
+            stars += blackbodySpectrum(temperature) * brightness;
+        }
+    }
+    
+    // Add subtle background glow
+    float bg = 0.02;
+    return stars + float3(bg * 0.8, bg * 0.9, bg * 1.0);
 }
 
 // Main compute kernel for geodesic ray tracing
@@ -193,26 +291,74 @@ kernel void geodesicRayTrace(constant CameraUniforms& camera [[buffer(0)]],
     // Initialize ray
     Ray ray = initRay(camera.position, dir);
 
-    // March ray through geodesic
+    // Enhanced ray marching with photorealistic rendering
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
-    const int MAX_STEPS = 10000;
-
+    const int MAX_STEPS = 12000;  // Increased for better quality
+    bool hitSomething = false;
+    float diskTemp = 0.0;
+    
     for (int step = 0; step < MAX_STEPS; ++step) {
-        // Check if ray hits black hole
+        // Check if ray hits black hole (event horizon)
         if (interceptBlackHole(ray)) {
-            color = float4(1.0, 0.0, 0.0, 1.0); // Red for black hole
+            // Pure black with subtle Hawking radiation glow
+            float hawkingGlow = exp(-abs(ray.r - SagA_rs) / (0.01 * SagA_rs));
+            color = float4(hawkingGlow * 0.1, hawkingGlow * 0.05, hawkingGlow * 0.15, 1.0);
+            hitSomething = true;
             break;
+        }
+        
+        // Check if ray intersects accretion disk
+        if (interceptAccretionDisk(ray, &diskTemp)) {
+            // Calculate realistic accretion disk color
+            float3 diskColor = blackbodySpectrum(diskTemp);
+            
+            // Apply gravitational redshift
+            float redshift = gravitationalRedshift(ray.r);
+            diskColor *= redshift;
+            
+            // Add relativistic beaming effects for rotating disk
+            float phi_velocity = sqrt(SagA_rs / ray.r) / ray.r;  // Keplerian velocity
+            float beaming = 1.0 + 0.3 * phi_velocity * cos(ray.phi);
+            diskColor *= beaming;
+            
+            // Apply distance-based intensity falloff
+            float intensity = 1.0 / (1.0 + pow(ray.r / DISK_INNER_RADIUS - 1.0, 2.0));
+            
+            color = float4(diskColor * intensity, 1.0);
+            hitSomething = true;
+            break;
+        }
+        
+        // Add photon sphere lensing effects
+        float lensing = photonSphereEffect(ray);
+        if (lensing > 0.1) {
+            float3 lensColor = float3(0.4, 0.6, 1.0) * lensing * 0.2;
+            color.rgb += lensColor;
         }
 
         // Integrate one step
         rk4Step(ray, D_LAMBDA);
 
-        // Check escape condition
+        // Check escape condition - ray reached infinity
         if (ray.r > ESCAPE_R) {
-            color = float4(0.0, 0.0, 1.0, 1.0); // Blue for escaped rays
             break;
         }
     }
+    
+    // If ray didn't hit anything, render starfield background
+    if (!hitSomething) {
+        float3 rayDirection = normalize(float3(ray.x, ray.y, ray.z) - camera.position);
+        color.rgb = generateStarfield(rayDirection);
+        
+        // Add subtle gravitational lensing distortion to background
+        float gravLens = 1.0 - SagA_rs / length(camera.position);
+        color.rgb *= (0.7 + 0.3 * gravLens);
+    }
+    
+    // Apply final color grading and tone mapping
+    color.rgb = pow(color.rgb, float3(0.85));  // Gamma correction
+    color.rgb = color.rgb / (1.0 + color.rgb); // Simple tone mapping
+    color.a = 1.0;
 
     // Store results
     rays[index] = ray;
