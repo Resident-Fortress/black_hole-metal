@@ -2,16 +2,16 @@
 
 Enhanced black hole simulation project with multiple GPU-accelerated implementations for different platforms.
 
-## 🚀 **NEW: Enhanced Photorealistic Features**
+## **NEW: Enhanced Photorealistic Features**
 
 ### Recent Enhancements
-- ✨ **Visible Light Beams**: Interactive light rays showing spacetime curvature
-- 🌡️ **Realistic Accretion Disk**: Temperature-based blackbody radiation with Doppler shifts
-- 🔴 **Gravitational Redshift**: Accurate color shifting based on gravitational potential
-- ⚡ **Enhanced Performance**: Better GPU utilization and optimization
-- 🎮 **Improved Interactivity**: Enhanced camera controls and visual presets
+- **Visible Light Beams**: Interactive light rays showing spacetime curvature
+- **Realistic Accretion Disk**: Temperature-based blackbody radiation with Doppler shifts
+- **Gravitational Redshift**: Accurate color shifting based on gravitational potential
+- **Enhanced Performance**: Better GPU utilization and optimization
+- **Improved Interactivity**: Enhanced camera controls and visual presets
 
-### 🆕 **NEW: CUDA Ray-Traced Version**
+### **NEW: CUDA Ray-Traced Version**
 Complete CUDA implementation in `/cuda-raytracer/` optimized for NVIDIA RTX 4060 8GB:
 - Full GPU ray tracing pipeline
 - Photorealistic material system  
@@ -22,21 +22,21 @@ Complete CUDA implementation in `/cuda-raytracer/` optimized for NVIDIA RTX 4060
 
 This repository contains several implementations of black hole ray tracing and geodesic computation:
 
-### 1. **Enhanced GPU OpenGL Compute** (`black_hole.cpp` + `geodesic.comp`) ⭐ **ENHANCED**
+### 1. **Enhanced GPU OpenGL Compute** (`black_hole.cpp` + `geodesic.comp`)
 - **Photorealistic rendering** with visible light beams
 - **Enhanced accretion disk** with temperature gradients and realistic physics
 - **Interactive controls** with camera presets (R, P keys)
 - **GPU-accelerated** geodesic ray tracing
 - **Real-time performance** on compatible GPUs
 
-### 2. **🆕 CUDA Ray-Traced Version** (`cuda-raytracer/`) ⭐ **NEW**
+### 2. ** CUDA Ray-Traced Version** (`cuda-raytracer/`) 
 - **NVIDIA RTX 4060 optimized** CUDA implementation
 - **Full GPU acceleration** for all calculations
 - **Photorealistic materials** and lighting
 - **Advanced ray tracing** pipeline
 - **Maximum performance** on NVIDIA hardware
 
-### 3. **🚀 Enhanced Metal GPU** (`Metal-iOS/`) ⭐ **ENHANCED**  
+### 3. **Enhanced Metal GPU** (`Metal-iOS/`)
 - **Apple M4 Silicon optimized** Metal implementation
 - **Enhanced photorealistic shaders** with improved lighting
 - **Native iOS/macOS application** with SwiftUI interface
@@ -55,14 +55,14 @@ This repository contains several implementations of black hole ray tracing and g
 
 ## Project Features
 
-### 🎨 Visual Enhancements
+### Visual Enhancements
 1. **Photorealistic Ray-tracing**: Enhanced gravitational lensing with visible light interactions
 2. **Advanced Accretion Disk**: Temperature-based spectrum with Doppler shifts and turbulence
 3. **Spacetime Visualization**: Visible light beams showing curvature effects
 4. **Real-time Performance**: GPU acceleration for interactive experience
 5. **Enhanced Lighting**: Hawking radiation glow and gravitational redshift effects
 
-### 🎮 Interactive Controls
+### Interactive Controls
 - **Mouse Drag**: Orbit camera around black hole
 - **Mouse Wheel**: Zoom in/out
 - **R Key**: Reset camera position
@@ -70,16 +70,17 @@ This repository contains several implementations of black hole ray tracing and g
 - **G Key**: Toggle gravity simulation for objects
 - **ESC**: Exit application
 
-### ⚡ Performance Targets
+### Performance Targets
 - **OpenGL Version**: 60+ FPS at 1080p on modern GPUs
 - **CUDA Version**: 60+ FPS at 1200x900 on RTX 4060 8GB
 - **Metal Version**: 60+ FPS at native resolution on M4 Apple Silicon
 
 ## Video Explanation
 
-Thank you everyone for checking out the video, it explains the code in detail: https://www.youtube.com/watch?v=8-B6ryuBkCM
+Original Author - @kavan010, he explains the code in detail and is the original repo owner at https://github.com/kavan010/black_hole 
+His video on the OpenGL implementation: https://www.youtube.com/watch?v=8-B6ryuBkCM
 
-## 🍎 Apple Metal Implementation
+## Apple Metal Implementation
 
 The **Metal-iOS** folder contains a complete native Apple application:
 - **Enhanced Metal compute shaders** for maximum GPU performance
@@ -96,7 +97,7 @@ open BlackHoleMetal.xcodeproj
 
 See [`Metal-iOS/BUILD_INSTRUCTIONS.md`](Metal-iOS/BUILD_INSTRUCTIONS.md) for detailed setup.
 
-## 🔥 CUDA Implementation
+## CUDA Implementation
 
 The **cuda-raytracer** folder contains a complete CUDA ray tracing implementation:
 - **Full GPU acceleration** using CUDA kernels
@@ -211,19 +212,19 @@ make -j$(nproc)
 | **Metal (M4)** | Apple M4 Silicon | Native | 60+ FPS |
 | **CPU Reference** | Modern CPU | 800x600 | 5-10 FPS |
 
-## 🔬 Physics Accuracy
+## Physics Accuracy
 
 Enhanced implementations include:
-- ✅ **Schwarzschild metric** for accurate black hole spacetime
-- ✅ **Null geodesic ray tracing** with 4th-order Runge-Kutta integration
-- ✅ **Gravitational time dilation** effects
-- ✅ **Gravitational redshift** color shifting
-- ✅ **Gravitational lensing** with light ray deflection
-- ✅ **Accretion disk physics** with temperature profiles
-- ✅ **Doppler shift effects** from disk rotation
-- ✅ **Visible light beam interactions** with spacetime curvature
+- **Schwarzschild metric** for accurate black hole spacetime
+- **Null geodesic ray tracing** with 4th-order Runge-Kutta integration
+- **Gravitational time dilation** effects
+- **Gravitational redshift** color shifting
+- **Gravitational lensing** with light ray deflection
+- **Accretion disk physics** with temperature profiles
+- **Doppler shift effects** from disk rotation
+- **Visible light beam interactions** with spacetime curvature
 
-## 🎯 Target Hardware Optimization
+## Target Hardware Optimization
 
 - **RTX 4060 8GB**: CUDA version optimized for Ada Lovelace architecture
 - **Apple M4 Silicon**: Metal version optimized for unified memory architecture
