@@ -1,24 +1,59 @@
 # **black**_**hole**
 
-Black hole simulation project
+Black hole simulation project with multiple implementations for different platforms.
 
-Here is the black hole raw code, everything will be inside a src bin incase you want to copy the files
+## Implementation Variants
 
-I'm writing this as I'm beginning this project (hopefully I complete it ;D) here is what I plan to do:
+This repository contains several implementations of black hole ray tracing and geodesic computation:
 
-1. Ray-tracing : add ray tracing to the gravity simulation to simulate gravitational lensing
+### 1. **CPU Implementation** (`CPU-geodesic.cpp`)
+- Full 3D geodesic ray tracing on CPU
+- OpenGL rendering with traditional graphics pipeline
+- High accuracy, suitable for reference computations
 
-2. Accretion disk : simulate accreciate disk using the ray tracing + the halos
+### 2. **2D Lensing** (`2D_lensing.cpp`) 
+- Simplified 2D gravitational lensing simulation
+- Faster computation for educational purposes
+- Visual ray trail tracking
 
-3. Spacetime curvature : demonstrate visually the "trapdoor in spacetime" that is black holes using spacetime grid
+### 3. **GPU OpenGL Compute** (`black_hole.cpp` + `geodesic.comp`)
+- OpenGL compute shader implementation
+- Real-time performance on compatible GPUs
+- Cross-platform OpenGL support
 
-4. [optional] try to make it run realtime ;D
+### 4. **🚀 Metal GPU (NEW)** (`Metal-iOS/`)
+- **Apple Silicon optimized** Metal implementation
+- **Native iOS/macOS application** with SwiftUI interface
+- **Maximum performance** on Apple devices
+- **Complete Xcode project** ready to build
 
-I hope it works :/
+## Project Features
 
-Edit: After completion of project -
+1. **Ray-tracing**: Gravitational lensing simulation using null geodesics
+2. **Accretion disk**: Visual effects with realistic physics
+3. **Spacetime curvature**: Demonstrates black hole geometry
+4. **Real-time performance**: GPU acceleration for interactive experience
 
-Thank you everyone for checking out the video, if you haven't it explains code in detail: https://www.youtube.com/watch?v=8-B6ryuBkCM
+## Video Explanation
+
+Thank you everyone for checking out the video, it explains the code in detail: https://www.youtube.com/watch?v=8-B6ryuBkCM
+
+## 🍎 Apple Metal Implementation
+
+The new **Metal-iOS** folder contains a complete native Apple application:
+- **Metal compute shaders** for maximum GPU performance
+- **SwiftUI interface** with real-time controls
+- **Universal app** supporting iPhone, iPad, and Mac
+- **Optimized for Apple Silicon** (M1/M2/M3)
+
+### Quick Start (Metal)
+```bash
+cd Metal-iOS
+open BlackHoleMetal.xcodeproj
+# Build & Run in Xcode (⌘+R)
+```
+
+See [`Metal-iOS/BUILD_INSTRUCTIONS.md`](Metal-iOS/BUILD_INSTRUCTIONS.md) for detailed setup.
 
 ## **Building Requirements:**
 
