@@ -267,13 +267,25 @@ struct StatisticsView: View {
             }
             .padding()
             .navigationTitle("Statistics")
+            // Apply compact title style only on mobile platforms
+            #if os(iOS) || os(tvOS) || os(visionOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                // Use platform-appropriate toolbar placement
+                #if os(iOS) || os(tvOS) || os(visionOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         // Dismiss handled by parent
                     }
                 }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    Button("Done") {
+                        // Dismiss handled by parent
+                    }
+                }
+                #endif
             }
         }
     }
