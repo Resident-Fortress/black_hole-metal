@@ -100,8 +100,8 @@ class MetalRenderer: NSObject, ObservableObject {
     
     // MARK: - Public Methods
     
-    /// Compute geodesics for given camera parameters
-    func computeGeodesics(camera: CameraUniforms) async throws -> GeodesicResults {
+    /// Compute geodesics for given camera parameters with quality settings
+    func computeGeodesics(camera: CameraUniforms, highQuality: Bool = false) async throws -> GeodesicResults {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         await MainActor.run {
@@ -136,8 +136,10 @@ class MetalRenderer: NSObject, ObservableObject {
         computeEncoder.setBuffer(rayBuffer, offset: 0, index: 1)
         computeEncoder.setBuffer(colorBuffer, offset: 0, index: 2)
         
-        // Calculate threadgroup size
-        let threadsPerThreadgroup = MTLSize(width: 16, height: 16, depth: 1)
+        // Calculate threadgroup size - smaller for high quality to avoid timeouts
+        let threadsPerThreadgroup = highQuality ? 
+            MTLSize(width: 8, height: 8, depth: 1) : 
+            MTLSize(width: 16, height: 16, depth: 1)
         let threadsPerGrid = MTLSize(width: imageWidth, height: imageHeight, depth: 1)
         
         // Dispatch compute kernel

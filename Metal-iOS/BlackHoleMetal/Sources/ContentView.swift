@@ -20,6 +20,7 @@ struct ContentView: View {
     @State private var selectedQuality: RenderQuality = .high
     @State private var showingInfo = false
     @State private var showingSettings = false
+    @State private var isRenderingHighQuality = false
     
     private let minDistance: Float = 1e10
     private let maxDistance: Float = 1e12
@@ -185,52 +186,82 @@ struct ContentView: View {
             )
             
             // Action buttons
-            HStack(spacing: 16) {
-                // Primary action
-                Button(action: computeGeodesics) {
+            VStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    // Primary action
+                    Button(action: computeGeodesics) {
+                        HStack {
+                            if renderer.isComputing && !isRenderingHighQuality {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title3)
+                            }
+                            Text(renderer.isComputing && !isRenderingHighQuality ? "Computing..." : "Render")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(25)
+                        .disabled(renderer.isComputing)
+                    }
+                    
+                    // Secondary actions
+                    Button(action: resetCamera) {
+                        Image(systemName: "arrow.counterclockwise.circle")
+                            .font(.title2)
+                            .frame(width: 50, height: 50)
+                            .background(Color.secondary.opacity(0.2))
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                    }
+                    
+                    Button(action: { isAutoRotating.toggle() }) {
+                        Image(systemName: isAutoRotating ? "pause.circle" : "play.circle")
+                            .font(.title2)
+                            .frame(width: 50, height: 50)
+                            .background(isAutoRotating ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.2))
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                    }
+                }
+                
+                // High Quality Still Rendering Button
+                Button(action: renderHighQualityStill) {
                     HStack {
-                        if renderer.isComputing {
+                        if isRenderingHighQuality {
                             ProgressView()
                                 .scaleEffect(0.8)
                                 .tint(.white)
                         } else {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: "camera.circle.fill")
                                 .font(.title3)
                         }
-                        Text(renderer.isComputing ? "Computing..." : "Render")
+                        Text(isRenderingHighQuality ? "Rendering High Quality..." : "Render High Quality Still")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: 44)
                     .background(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                            gradient: Gradient(colors: [Color.green, Color.teal]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .foregroundColor(.white)
-                    .cornerRadius(25)
-                    .disabled(renderer.isComputing)
-                }
-                
-                // Secondary actions
-                Button(action: resetCamera) {
-                    Image(systemName: "arrow.counterclockwise.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
-                }
-                
-                Button(action: { isAutoRotating.toggle() }) {
-                    Image(systemName: isAutoRotating ? "pause.circle" : "play.circle")
-                        .font(.title2)
-                        .frame(width: 50, height: 50)
-                        .background(isAutoRotating ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.2))
-                        .foregroundColor(.white)
-                        .cornerRadius(25)
+                    .cornerRadius(22)
+                    .disabled(renderer.isComputing || isRenderingHighQuality)
                 }
             }
             .padding(.horizontal, 20)
@@ -263,6 +294,28 @@ struct ContentView: View {
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    private func renderHighQualityStill() {
+        Task {
+            await MainActor.run {
+                isRenderingHighQuality = true
+            }
+            
+            do {
+                let camera = createCamera()
+                let results = try await renderer.computeGeodesics(camera: camera, highQuality: true)
+                await MainActor.run {
+                    lastResults = results
+                    isRenderingHighQuality = false
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isRenderingHighQuality = false
                 }
             }
         }

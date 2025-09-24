@@ -1,9 +1,12 @@
 #pragma once
 
-#include <cuda_runtime.h>
-#include <cuda_gl_interop.h>
+// OpenGL headers must be included in this specific order
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
+// CUDA headers (after OpenGL)
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
